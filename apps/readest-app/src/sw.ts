@@ -28,9 +28,10 @@ const serwist = new Serwist({
   runtimeCaching: [
     {
       matcher: ({ url, request }) => {
-        const clientRoutes = ['/library', '/reader'];
-        const isClientRoute = clientRoutes.some((route) => url.pathname.startsWith(route));
-        return isClientRoute && request.mode === 'navigate';
+        // Catch ALL same-origin navigations (not just /library and /reader)
+        // so the offline fallback chain below can rescue any URL — including
+        // root `/` which the user lands on when launching the PWA offline.
+        return request.mode === 'navigate' && url.origin === self.location.origin;
       },
       handler: new NetworkFirst({
         cacheName: 'client-pages',
