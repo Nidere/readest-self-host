@@ -1,0 +1,27 @@
+# Caddy replacement for Supabase's Kong gateway.
+# Routes /auth/v1/* to GoTrue and /rest/v1/* to PostgREST, stripping the prefix.
+# Drops Kong's key-auth/acl plugins — auth is enforced via JWT inside the upstream services.
+
+:8000 {
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+
+    @auth path /auth/v1/* /auth/v1
+    handle @auth {
+        uri strip_prefix /auth/v1
+        reverse_proxy auth:9999
+    }
+
+    @rest path /rest/v1/* /rest/v1
+    handle @rest {
+        uri strip_prefix /rest/v1
+        reverse_proxy rest:3000
+    }
+
+    handle {
+        respond "kong-shim: route not found" 404
+    }
+}

@@ -22,6 +22,7 @@ export const transformBookConfigToDB = (bookConfig: unknown, userId: string): DB
     searchConfig,
     viewSettings,
     updatedAt,
+    progressUpdatedAt,
   } = bookConfig as BookConfig;
 
   return {
@@ -35,6 +36,7 @@ export const transformBookConfigToDB = (bookConfig: unknown, userId: string): DB
     search_config: searchConfig && JSON.stringify(searchConfig),
     view_settings: viewSettings && JSON.stringify(viewSettings),
     updated_at: new Date(updatedAt ?? Date.now()).toISOString(),
+    progress_updated_at: new Date(progressUpdatedAt ?? updatedAt ?? Date.now()).toISOString(),
   };
 };
 
@@ -49,6 +51,7 @@ export const transformBookConfigFromDB = (dbBookConfig: DBBookConfig): BookConfi
     search_config,
     view_settings,
     updated_at,
+    progress_updated_at,
   } = dbBookConfig;
   return {
     bookHash: book_hash,
@@ -60,6 +63,7 @@ export const transformBookConfigFromDB = (dbBookConfig: DBBookConfig): BookConfi
     searchConfig: search_config && JSON.parse(search_config),
     viewSettings: view_settings && JSON.parse(view_settings),
     updatedAt: new Date(updated_at!).getTime(),
+    progressUpdatedAt: progress_updated_at ? new Date(progress_updated_at).getTime() : undefined,
   } as BookConfig;
 };
 

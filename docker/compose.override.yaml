@@ -1,0 +1,34 @@
+services:
+  client:
+    image: readest-local:prod
+    pull_policy: never
+    environment:
+      SUPABASE_PUBLIC_URL: https://readest.nidere.com
+      S3_ENDPOINT: https://s3.eu-west-3.amazonaws.com
+      S3_PUBLIC_ENDPOINT: https://s3.eu-west-3.amazonaws.com
+      S3_REGION: eu-west-3
+      S3_BUCKET_NAME: readest-nidere-books
+      S3_ACCESS_KEY_ID: AKIASNZ7LXLYBFE3KSFJ
+      S3_SECRET_ACCESS_KEY: 8ZW34CDrn2u8qNzhAcqpQ9nDh0Ou8RvGioljcttW
+    depends_on: !reset []
+
+  # Replace Kong (630 MB) with Caddy (~15 MB) using the same service name
+  # so other services' SUPABASE_URL=http://kong:8000 still resolves.
+  # JWT-based auth is enforced by GoTrue/PostgREST themselves; we drop Kong's
+  # key-auth/acl plugins that gated requests via the `apikey` header.
+  kong:
+    image: caddy:2-alpine
+    container_name: supabase-kong
+    restart: unless-stopped
+    entrypoint: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    command: []
+    ports:
+      - "${KONG_HTTP_PORT}:8000/tcp"
+    volumes: !override
+      - ./caddy-internal/Caddyfile:/etc/caddy/Caddyfile:ro
+    environment: !reset {}
+
+  minio:
+    profiles: ["disabled"]
+  minio-setup:
+    profiles: ["disabled"]

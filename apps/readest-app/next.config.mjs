@@ -38,7 +38,7 @@ const nextConfig = {
   assetPrefix: '',
   reactStrictMode: true,
   serverExternalPackages: ['isows'],
-  allowedDevOrigins: ['192.168.2.120'],
+  allowedDevOrigins: ["192.168.2.120", "readest.nidere.com", "*.nidere.com"],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -49,6 +49,7 @@ const nextConfig = {
       // can't find fflate (only installed in this app's node_modules).
       fflate: path.resolve(__dirname, 'node_modules/fflate'),
       ...(appPlatform !== 'web' ? { '@tursodatabase/database-wasm': false } : {}),
+      ...(appPlatform === 'web' ? { 'tauri-plugin-turso': false } : {}),
     };
     return config;
   },
@@ -59,6 +60,7 @@ const nextConfig = {
       // imports not implemented") — use a project-relative path.
       fflate: './node_modules/fflate',
       ...(appPlatform !== 'web' ? { '@tursodatabase/database-wasm': './src/utils/stub.ts' } : {}),
+      ...(appPlatform === 'web' ? { 'tauri-plugin-turso': './src/utils/stub.ts' } : {}),
     },
   },
   transpilePackages: [

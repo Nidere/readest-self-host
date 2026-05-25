@@ -39,6 +39,17 @@ ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_OBJECT_STORAGE_TYPE
 ARG NEXT_PUBLIC_STORAGE_FIXED_QUOTA
 ARG NEXT_PUBLIC_TRANSLATION_FIXED_QUOTA
+# Promote build-time ARGs to ENV so Next.js (next.config.mjs) and Serwist see
+# them via process.env during `pnpm build-web`. Without this, NEXT_PUBLIC_APP_PLATFORM
+# is undefined at build time, pwaDisabled defaults to true, service worker is
+# never generated, and /sw.js returns 404 -> no offline support.
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_APP_PLATFORM=$NEXT_PUBLIC_APP_PLATFORM \
+    NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \
+    NEXT_PUBLIC_OBJECT_STORAGE_TYPE=$NEXT_PUBLIC_OBJECT_STORAGE_TYPE \
+    NEXT_PUBLIC_STORAGE_FIXED_QUOTA=$NEXT_PUBLIC_STORAGE_FIXED_QUOTA \
+    NEXT_PUBLIC_TRANSLATION_FIXED_QUOTA=$NEXT_PUBLIC_TRANSLATION_FIXED_QUOTA
 COPY --from=dependencies /app/node_modules /app/node_modules
 COPY --from=dependencies /app/apps/readest-app/node_modules /app/apps/readest-app/node_modules
 COPY --from=dependencies /app/apps/readest-app/public/vendor /app/apps/readest-app/public/vendor
