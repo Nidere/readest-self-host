@@ -791,7 +791,7 @@ export const READEST_PUBLIC_STORAGE_BASE_URL = 'https://storage.readest.com';
 
 export const READEST_OPDS_USER_AGENT = 'Readest/1.0 (OPDS Browser)';
 
-export const SYNC_PROGRESS_INTERVAL_SEC = 3;
+export const SYNC_PROGRESS_INTERVAL_SEC = 1;
 export const SYNC_NOTES_INTERVAL_SEC = 5;
 export const SYNC_BOOKS_INTERVAL_SEC = 5;
 export const CHECK_UPDATE_INTERVAL_SEC = 24 * 60 * 60;

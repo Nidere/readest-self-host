@@ -30,6 +30,19 @@ interface BookDataState {
   clearBookData: (keyOrId: string) => void;
 }
 
+// Tracks last-PERSISTED progress signature per book hash for saveConfig.
+// We cannot compare to current store state because the caller has already
+// mutated the store before invoking us — store-vs-store is always empty.
+const lastPersistedProgressSig = new Map<string, string>();
+
+const computeProgressSig = (c: Partial<BookConfig>): string =>
+  JSON.stringify({
+    progress: c.progress,
+    location: c.location,
+    xpointer: c.xpointer,
+    rsvpPosition: c.rsvpPosition,
+  });
+
 export const useBookDataStore = create<BookDataState>((set, get) => ({
   booksData: {},
   getBookData: (keyOrId: string) => {
@@ -97,11 +110,30 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
     const newLibrary = [updatedBook, ...library.slice(0, idx), ...library.slice(idx + 1)];
     setLibrary(newLibrary);
 
-    // Refresh updatedAt immutably via the store rather than mutating the
-    // caller-provided object. This notifies Zustand subscribers and works
-    // regardless of whether the caller passed the shared store config.
-    get().setConfig(bookKey, { updatedAt: now });
-    const configToSave = { ...config, updatedAt: now };
+    // Detect a real reading-position change vs the last-PERSISTED state.
+    // Cannot diff store-vs-store (always empty since caller already wrote
+    // the new state). Instead keep a process-local sig map.
+    const prevConfig = get().booksData[hash]?.config;
+    const currentSig = computeProgressSig(config);
+    const lastSig = lastPersistedProgressSig.get(hash);
+    const positionChanged = lastSig === undefined || lastSig !== currentSig;
+    const nextProgressUpdatedAt = positionChanged
+      ? now
+      : (config.progressUpdatedAt ?? prevConfig?.progressUpdatedAt ?? now);
+    console.log("[sync-save] saveConfig", {
+      bookKey,
+      positionChanged,
+      lastSig: lastSig ? lastSig.slice(0, 80) : null,
+      currentSig: currentSig.slice(0, 80),
+      prevProgressUpdatedAt: prevConfig?.progressUpdatedAt,
+      nextProgressUpdatedAt,
+      now,
+    });
+    if (positionChanged) {
+      lastPersistedProgressSig.set(hash, currentSig);
+    }
+    get().setConfig(bookKey, { updatedAt: now, progressUpdatedAt: nextProgressUpdatedAt });
+    const configToSave = { ...config, updatedAt: now, progressUpdatedAt: nextProgressUpdatedAt };
     await appService.saveBookConfig(updatedBook, configToSave, settings);
     await appService.saveLibraryBooks(useLibraryStore.getState().library);
   },

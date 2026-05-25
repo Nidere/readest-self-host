@@ -277,18 +277,60 @@ export async function POST(req: NextRequest) {
         batchAuthoritativeRecords.push(...(inserted || []));
       }
 
-      // Batch upsert
+      // Batch upsert (with per-field merge for book_configs to protect reading position)
       if (toUpdate.length > 0) {
+        let finalToUpdate = toUpdate;
+        if (table === 'book_configs') {
+          finalToUpdate = toUpdate.map((dbRec: any) => {
+            const key = primaryKeys.map((pk) => dbRec[pk]).join('|');
+            const serverData: any = serverRecordsMap.get(key);
+            if (!serverData) return dbRec;
+            // Resolve position timestamps: prefer progress_updated_at, fallback to updated_at
+            const clientProgTs = new Date(dbRec.progress_updated_at || dbRec.updated_at || 0).getTime();
+            const serverProgTs = new Date(serverData.progress_updated_at || serverData.updated_at || 0).getTime();
+            const serverPositionNewer = serverProgTs > clientProgTs;
+            console.log("[sync-server] merge book_configs", {
+              book_hash: dbRec.book_hash,
+              clientProgTs: new Date(clientProgTs).toISOString(),
+              serverProgTs: new Date(serverProgTs).toISOString(),
+              client_progress_updated_at: dbRec.progress_updated_at,
+              server_progress_updated_at: serverData.progress_updated_at,
+              client_progress: dbRec.progress,
+              server_progress: serverData.progress,
+              decision: serverPositionNewer ? "keep-server-position" : "use-client",
+            });
+            if (serverPositionNewer) {
+              // Keep server's reading position; client's other fields can still win
+              return {
+                ...dbRec,
+                progress: serverData.progress,
+                location: serverData.location,
+                xpointer: serverData.xpointer,
+                rsvp_position: serverData.rsvp_position,
+                progress_updated_at: serverData.progress_updated_at,
+              };
+            }
+            return dbRec;
+          });
+        }
         const { data: updated, error: updateError } = await supabase
           .from(table)
-          .upsert(toUpdate, {
+          .upsert(finalToUpdate, {
             onConflict: ['user_id', ...primaryKeys].join(','),
           })
           .select();
 
         if (updateError) {
-          console.log(`Failed to update ${table} records:`, JSON.stringify(toUpdate));
+          console.log(`Failed to update ${table} records:`, JSON.stringify(finalToUpdate));
           return { error: updateError.message };
+        }
+        if (table === "book_configs") {
+          console.log("[sync-server] upsert returned", (updated || []).map((r: any) => ({
+            book_hash: r.book_hash,
+            updated_at: r.updated_at,
+            progress_updated_at: r.progress_updated_at,
+            progress: r.progress,
+          })));
         }
         batchAuthoritativeRecords.push(...(updated || []));
       }

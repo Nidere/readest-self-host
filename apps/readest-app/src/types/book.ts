@@ -417,6 +417,7 @@ export interface BookConfig {
   searchConfig?: Partial<BookSearchConfig>;
   viewSettings?: Partial<ViewSettings>;
 
+  progressUpdatedAt?: number;
   lastSyncedAtConfig?: number;
   lastSyncedAtNotes?: number;
   lastPushedAtConfig?: number;
